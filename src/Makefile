@@ -1,5 +1,5 @@
 # TARGET = sample
-TARGET = shoot6
+TARGET = shoot
 
 INC_DIR	= c:/cygwin64/usr/local/lib/DxLibs
 LIB_DIR = $(INC_DIR)
