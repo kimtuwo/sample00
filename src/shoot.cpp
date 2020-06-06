@@ -2,6 +2,8 @@
 #include<stdlib.h>
 #include<time.h>
 
+#define GAMEPAD
+
 // 画像データサイズ
 struct CharPicData {
 	int width, height;
@@ -137,11 +139,29 @@ bool checkFire(Character &a, Character &b, int ratio_n, int ratio_d)  // 発射�
 }
 
 //---------------------------------------------------------------------
+void padcheck()
+{
+	int Pad;
+
+        while( !ScreenFlip() && !ProcessMessage() && !ClearDrawScreen() ){
+                Pad = GetJoypadInputState( DX_INPUT_KEY_PAD1 ) ;        //入力状態をPadに格納
+                for( int i=0; i<28; i++ ){      //ボタン28個分ループ
+                        if( Pad & (1<<i) ){             //ボタンiの入力フラグが立っていたら
+                                DrawFormatString( 0, i*15, GetColor(255,255,255), "%d", i );
+                        }
+                }
+        }
+
+}
+
+//---------------------------------------------------------------------
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	ChangeWindowMode(TRUE);
 	DxLib_Init();
 	SetDrawScreen(DX_SCREEN_BACK);
+
+	//padcheck();
 
 	DrawString( 240, 208, "shooting game", GetColor(255,255,255));
 	DrawString( 240, 230, "please press any key", GetColor(255,255,255));
@@ -169,6 +189,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	while (!ProcessMessage()) {
 		ClearDrawScreen();
 
+#ifndef GAMEPAD
 		// 自機の位置更新
 		if (CheckHitKey(KEY_INPUT_LEFT)) {
 			player.move(-8, 0);
@@ -190,7 +211,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		if (CheckHitKey(KEY_INPUT_ESCAPE)) {
 			break;
 		}
+#else
+		int pad = GetJoypadInputState(DX_INPUT_KEY_PAD1);
+	
+		// 自機の位置更新
+		if (pad & PAD_INPUT_LEFT) {
+			player.move(-8, 0);
+		}
+		if (pad & PAD_INPUT_RIGHT) {
+			player.move(8, 0);
+		}
 
+		// 弾丸発射
+		if (pad & PAD_INPUT_2) {
+			if(shot_count < MAX_SHOTS && shot_interval == 0) {
+				p_shot[shot_index % MAX_SHOTS] = new Shot(player.get_x() + 8, INI_PY, window_erea, ShotPic, -SHOT_SPEED);
+				shot_index++;
+				shot_count++;
+				shot_interval = SHOT_INTERVAL;
+			}
+		}
+
+		if (pad & PAD_INPUT_9) {
+			break;
+		}
+#endif
 		// 敵の位置 更新
 		enemy0.update();
 		enemy1.update();
@@ -238,6 +283,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		// あたり判定（自機）
 		if ((eshot[0] && checkHit(player, *eshot[0])) || (eshot[1] && checkHit(player, *eshot[1]))){
+			//StartJoypadVibration( DX_INPUT_PAD1, 1000, 1000 ) ;
 			DrawString( 240, 208, "Game Over!", GetColor(255,255,255));
 			ScreenFlip();
 			WaitTimer(2000);
